@@ -2546,7 +2546,6 @@ DEFINE l_flag 		 LIKE type_file.num10
 DEFINE l_type 		 LIKE type_file.chr10
 DEFINE l_type2 		 LIKE type_file.chr10
 DEFINE l_str			 STRING
-DEFINE l_tlf07     LIKE tlf_file.tlf07   #add--20181112 by shiunyo
 
 
     LET g_action_choice = ""
@@ -2747,21 +2746,6 @@ DEFINE l_tlf07     LIKE tlf_file.tlf07   #add--20181112 by shiunyo
             CALL t500_set_entry_b(p_cmd)   #add--20180824 by shiunyo
             CALL t500_set_no_entry_b(p_cmd)   #add--20180824 by shiunyo
             IF NOT cl_null(g_ofb[l_ac].ofb34) THEN
-                #add--20181112 by shiunyo--(S)
-if g_user = 'tiptop' then
-                IF NOT cl_null(g_ofa.ofa62) THEN
-                   SELECT MIN (tlf07) INTO l_tlf07
-                     FROM tlf_file
-                    WHERE tlf026 = g_ofb[l_ac].ofb34
-                   IF l_tlf07 > g_ofa.ofa62 THEN
-                      LET g_ofb[l_ac].ofb34 = g_ofb_t.ofb34
-                      CALL cl_err(g_ofb[l_ac].ofb34,'cxm-508',1)
-                      DISPLAY BY NAME g_ofb[l_ac].ofb34
-                      NEXT FIELD ofb34
-                   END IF
-                END IF
-end if
-                #add--20181112 by shiunyo--(E)
                 IF NOT cl_null(g_ofa.ofaud02) THEN
                     IF g_ofa.ofaud02 = '1' THEN
                         SELECT * FROM oga_file
@@ -2800,8 +2784,8 @@ end if
             END IF
 
         BEFORE FIELD ofb31
-          CALL t500_set_entry_b(p_cmd)
-         # CALL t500_set_no_entry_b(p_cmd)   #add--20180824 by shiunyo
+           CALL t500_set_entry_b(p_cmd)
+           CALL t500_set_no_entry_b(p_cmd)   #add--20180824 by shiunyo
 
         AFTER FIELD ofb31
            IF NOT cl_null(g_ofb[l_ac].ofb31) THEN
@@ -3401,14 +3385,6 @@ end if
                  IF NOT cl_null(g_ofa.ofaud03) THEN
                  		LET l_str = l_str," AND ogaud02 = '",g_ofa.ofaud03,"' "
                	 END IF
-                 #add--20181112 by shiunyo--(S)
-if g_user = 'tiptop' then
-                 IF NOT cl_null(g_ofa.ofa62) THEN
-                    LET l_str = l_str," AND ((SELECT DISTINCT tlf07 FROM tlf_file WHERE tlf026 = oga01) <= '",g_ofa.ofa62,"')",
-                                      " AND (COALESCE(SELECT COUNT(1) FROM tlf_file WHERE tlf026 = oga01),0) > 0 "
-                 END IF
-end if
-                 #add--20181112 by shiunyo--(E)
                  LET g_qryparam.where = l_str
                  CALL cl_create_qry() RETURNING g_ofb[l_ac].ofb34,g_ofb[l_ac].ofb35
                  DISPLAY BY NAME g_ofb[l_ac].ofb34,g_ofb[l_ac].ofb35
@@ -4741,7 +4717,6 @@ FUNCTION t500_y() 			# when g_ofa.ofaconf='N' (Turn to 'Y')
    DEFINE l_ofb12         LIKE ofb_file.ofb12        #MOD-AC0062
    DEFINE l_ofb RECORD    LIKE ofb_file.* ,l_tc_rvvs04 LIKE tc_rvvs_file.tc_rvvs04    #add by lik 171010
    DEFINE l_ta_ima01      LIKE ima_file.ta_ima01  # mod by lhm 180427 是否区分size注记
-   DEFINE l_tlf07         LIKE tlf_file.tlf07   #add--20181112 by shiunyo
 #CHI-C30107 -------------- add -------------- begin
    IF g_ofa.ofaconf='Y' THEN RETURN END IF
    IF g_ofa.ofaconf = 'X' THEN CALL cl_err(g_ofa.ofa01,'9024',0) RETURN END IF
@@ -4774,24 +4749,6 @@ FUNCTION t500_y() 			# when g_ofa.ofaconf='N' (Turn to 'Y')
 #MOD-AC0062 --end--
 
 
-  #add--20181112 by shiunyo--(S)
-if g_user = 'tiptop' then
-  IF NOT cl_null(g_ofa.ofa62) THEN
-     DECLARE t500_ofb34_cs CURSOR FOR
-      SELECT DISTINCT ofb34 FROM ofb_file 
-       WHERE ofb01 = g_ofa.ofa01
-     FOREACH t500_ofb34_cs INTO l_ofb.ofb34
-        SELECT MIN (tlf07) INTO l_tlf07
-          FROM tlf_file
-         WHERE tlf026 = g_ofb[l_ac].ofb34
-        IF l_tlf07 > g_ofa.ofa62 THEN
-           CALL cl_err(g_ofb[l_ac].ofb34,'cxm-508',1)
-           RETURN
-        END IF
-     END FOREACH
-  END IF
-end if
-  #add--20181112 by shiunyo--(E)
   #add by lik 171010-s 检查SIZE明细数与总数要一致
   DECLARE t500_ofb_cs CURSOR FOR
    SELECT * FROM ofb_file 
@@ -4860,10 +4817,7 @@ end if
 END FUNCTION
 
 FUNCTION t500_z() 			# when g_ofa.ofaconf='Y' (Turn to 'N')
-   DEFINE l_n     LIKE type_file.num5          #No.FUN-680137 SMALLINT
-   DEFINE l_ofb34 LIKE ofb_file.ofb34   #add--20181112 by shiunyo
-   DEFINE l_ofb35 LIKE ofb_file.ofb35   #add--20181112 by shiunyo
-   DEFINE l_cnt   LIKE type_file.num5   #add--20181112 by shiunyo
+   DEFINE l_n LIKE type_file.num5          #No.FUN-680137 SMALLINT
 
    SELECT * INTO g_ofa.* FROM ofa_file WHERE ofa01 = g_ofa.ofa01
    IF g_ofa.ofaconf='N' THEN RETURN END IF
@@ -4892,25 +4846,6 @@ FUNCTION t500_z() 			# when g_ofa.ofaconf='Y' (Turn to 'N')
        RETURN
    END IF
    #MOD-C60193 add end  ----
-
-   #add--20181112 by shiunyo--(S)
-if g_user = 'tiptop' then
-   DECLARE t500_ofb34_35_cs CURSOR FOR
-    SELECT DISTINCT ofb34,ofb35 FROM ofb_file 
-     WHERE ofb01 = g_ofa.ofa01
-   FOREACH t500_ofb34_35_cs INTO l_ofb34,l_ofb35
-      SELECT COUNT(1) INTO l_cnt
-        FROM omf_file
-       WHERE omf11 = l_ofb34
-         AND omf12 = l_ofb35
-         AND omf08 = 'Y'
-      IF NOT cl_null(l_cnt) AND l_cnt > 0 THEN
-         CALL cl_err('','cxm-509',1)
-         RETURN
-      END IF
-   END FOREACH
-end if 
-   #add--20181112 by shiunyo--(E)
 
    BEGIN WORK
 
